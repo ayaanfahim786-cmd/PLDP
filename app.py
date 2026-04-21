@@ -77,6 +77,35 @@ def inject_custom_css():
         box-shadow: 0 6px 15px rgba(212, 175, 55, 0.08);
     }
     
+    /* Floating Action Button (FAB) */
+    div[data-testid="stButton"] > button[kind="primary"] {
+        position: fixed !important;
+        bottom: 40px !important;
+        right: 40px !important;
+        width: 65px !important;
+        height: 65px !important;
+        border-radius: 50% !important;
+        z-index: 1000 !important;
+        font-size: 32px !important;
+        background-color: #d4af37 !important;
+        color: #1a1a1a !important;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.4) !important;
+        border: none !important;
+        padding: 0 !important;
+        transition: transform 0.2s, background-color 0.2s !important;
+    }
+
+    div[data-testid="stButton"] > button[kind="primary"] p {
+        font-size: 34px !important;
+        margin-top: -5px !important;
+    }
+
+    div[data-testid="stButton"] > button[kind="primary"]:hover {
+        transform: scale(1.1) !important;
+        background-color: #e5c354 !important;
+        color: #000 !important;
+    }
+    
     /* Main H1 Title in Gold */
     h1 {
         font-weight: 800 !important;
@@ -89,8 +118,52 @@ def inject_custom_css():
 </style>
 """, unsafe_allow_html=True)
 
+@st.dialog("Submit Course Feedback")
+def feedback_dialog():
+    st.write("Share your thoughts about a course!")
+    
+    # Simple form for feedback
+    course_id = st.text_input("Course ID", placeholder="e.g. CS101")
+    instructor_id = st.text_input("Instructor ID (Optional)", placeholder="e.g. INS999")
+    semester = st.selectbox("Semester", ["Spring 2024", "Fall 2023", "Spring 2023", "Fall 2022"])
+    
+    st.write("Rating")
+    rating = st.slider("Rating Slider", 1, 5, 5, label_visibility="collapsed")
+    
+    comments = st.text_area("Comments", placeholder="What did you like or dislike?")
+    
+    if st.button("Submit feedback", use_container_width=True):
+        if not course_id:
+            st.error("Please provide a Course ID.")
+        else:
+            new_feedback = {
+                "CourseID": course_id,
+                "InstructorID": instructor_id if instructor_id else "Unknown",
+                "Rating": rating,
+                "Enrollment": 50, # Default value for display purposes
+                "Semester": semester,
+                "Comments": comments
+            }
+            try:
+                with open("course_data.json", "r") as f:
+                    data = json.load(f)
+                data.append(new_feedback)
+                with open("course_data.json", "w") as f:
+                    json.dump(data, f, indent=4)
+                
+                st.session_state.submit_success = True
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error saving data: {e}")
+
 def main():
     inject_custom_css()
+    
+    # Toast notification for successful feedback submission
+    if st.session_state.get("submit_success", False):
+        st.toast("Feedback submitted successfully!", icon="✅")
+        st.session_state.submit_success = False
+
     st.title("University Course Feedback Analyzer")
     st.markdown("Analyzing student ratings and comments.")
     
@@ -210,6 +283,10 @@ def main():
             with st.chat_message("user", avatar="👤"):
                 st.write(f"**Semester:** {c['Semester']} &nbsp; • &nbsp; **Score:** {rating_stars}")
                 st.write(f"*{c['Comments']}*")
+
+    # Floating '+' button at the bottom
+    if st.button("➕", type="primary", help="Give Feedback"):
+        feedback_dialog()
 
 if __name__ == "__main__":
     main()
